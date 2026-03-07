@@ -8,7 +8,7 @@ Connects to your printer via MQTT over TLS and displays a real-time dashboard wi
 
 | Dashboard | Web Interface — Settings | Web Interface — Gauge Colors |
 |---|---|---|
-| ![Dashboard](IMG/interface1.jpg) | ![Settings](IMG/screen1.png) | ![Gauge Colors](IMG/screen2.png) |
+| ![Dashboard](img/interface1.jpg) | ![Settings](img/screen1.png) | ![Gauge Colors](img/screen2.png) |
 
 ## Features
 
