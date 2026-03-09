@@ -39,15 +39,25 @@ Connects to your printer via MQTT over TLS and displays a real-time dashboard wi
 | MOSI (SDA) | 11 |
 | SCLK (SCL) | 12 |
 | CS | 10 |
-| DC | 8 |
+| DC | 9 |
 | RST | 8 |
 | BL | 13 |
 
 Adjust pin assignments in `platformio.ini` build_flags to match your wiring.
 
+## Flashing
+
+1. Download the latest `BambuHelper-WebFlasher.bin` from [Releases](../../releases)
+2. Open [ESP Web Flasher](https://espressif.github.io/esptool-js/) in Chrome or Edge
+3. Connect your ESP32-S3 via USB
+4. Click **Connect** and select your device
+5. Set flash address to **0x0**
+6. Select the downloaded `.bin` file
+7. Click **Program**
+
 ## Setup
 
-1. **Flash** the firmware via PlatformIO (`pio run -t upload`)
+1. **Flash** the firmware (see above)
 2. **Connect** to the `BambuHelper-XXXX` WiFi network (password: `bambu1234`)
 3. **Open** `192.168.4.1` in your browser
 4. **Enter** your home WiFi credentials and printer details:
