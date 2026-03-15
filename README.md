@@ -73,6 +73,8 @@ ESP32-S3 SuperMini: https://a.aliexpress.com/_Eyk9GdA
 
 Adjust pin assignments in `platformio.ini` build_flags to match your wiring.
 
+Touch TTP223 button is optional, it is used to switch between printers, you may use standard push button and connect it between pin 4 and GND. Then pick correct button setting in web interface under Multi-Printer support
+
 ![wiring](img/wiring.png)
 
 
