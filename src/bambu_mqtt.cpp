@@ -177,6 +177,10 @@ static void parseMqttPayload(byte* payload, unsigned int length,
   pf["heatbreak_fan_speed"] = true;
   pf["wifi_signal"] = true;
   pf["spd_lvl"] = true;
+  // H2D/H2C dual nozzle
+  JsonObject ef = filter["print"]["extruder"].to<JsonObject>();
+  ef["info"] = true;
+  ef["state"] = true;
 
   JsonDocument doc;
   DeserializationError err = deserializeJson(doc, payload, length,
@@ -287,6 +291,34 @@ static void parseMqttPayload(byte* payload, unsigned int length,
 
   if (print["spd_lvl"].is<int>())
     s.speedLevel = print["spd_lvl"].as<int>();
+
+  // H2D/H2C dual nozzle: extruder.info[] has packed temps, extruder.state has active ID
+  JsonObject extruder = print["extruder"];
+  if (!extruder.isNull()) {
+    JsonArray info = extruder["info"];
+    if (info.size() >= 2) {
+      s.dualNozzle = true;
+
+      // Active nozzle from state bits 4-7
+      if (extruder["state"].is<int>()) {
+        uint32_t state = extruder["state"].as<unsigned int>();
+        s.activeNozzle = (state >> 4) & 0x0F;
+        if (s.activeNozzle > 1) s.activeNozzle = 0;
+      }
+
+      // Extract active nozzle temp from packed integer: high word=target, low word=current
+      for (JsonObject entry : info) {
+        if (!entry["id"].is<int>() || !entry["temp"].is<int>()) continue;
+        uint8_t id = entry["id"].as<int>();
+        if (id == s.activeNozzle) {
+          uint32_t packed = entry["temp"].as<unsigned int>();
+          s.nozzleTemp   = (float)(packed & 0xFFFF);
+          s.nozzleTarget = (float)(packed >> 16);
+          break;
+        }
+      }
+    }
+  }
 
   s.lastUpdate = millis();
 }
@@ -502,6 +534,15 @@ uint8_t getActiveConnCount() {
 
 void initBambuMqtt() {
   Serial.println("MQTT: initBambuMqtt() — multi-printer");
+
+  // Clean up any existing connections before reinitializing
+  for (uint8_t i = 0; i < MAX_ACTIVE_PRINTERS; i++) {
+    if (conns[i].mqtt && conns[i].mqtt->connected()) {
+      conns[i].mqtt->disconnect();
+    }
+    releaseClients(conns[i]);
+    conns[i].active = false;
+  }
 
   // First: do all cloud API work (userId extraction) before any MQTT connects
   for (uint8_t i = 0; i < MAX_ACTIVE_PRINTERS; i++) {

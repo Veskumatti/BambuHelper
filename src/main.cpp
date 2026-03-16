@@ -18,6 +18,22 @@ static void handleRotation() {
   if (rotState.mode == ROTATE_OFF) return;
   if (getActiveConnCount() < 2) return;
 
+  // Don't rotate when display is in clock or off state,
+  // UNLESS a printer is actively printing (wake up to show it)
+  ScreenState scr = getScreenState();
+  if (scr == SCREEN_CLOCK || scr == SCREEN_OFF) {
+    bool anyPrinting = false;
+    for (uint8_t i = 0; i < MAX_ACTIVE_PRINTERS; i++) {
+      if (isPrinterConfigured(i) && printers[i].state.connected && printers[i].state.printing) {
+        anyPrinting = true;
+        break;
+      }
+    }
+    if (!anyPrinting) return;
+    // A printer started printing — wake display and let rotation proceed
+    setBacklight(brightness);
+  }
+
   unsigned long now = millis();
   if (now - rotState.lastRotateMs < rotState.intervalMs) return;
 

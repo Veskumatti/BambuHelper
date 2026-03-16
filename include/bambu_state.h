@@ -29,6 +29,8 @@ struct BambuState {
   uint8_t heatbreakFanPct;    // heatbreak fan 0-100%
   int8_t wifiSignal;          // RSSI in dBm
   uint8_t speedLevel;         // 1=silent, 2=standard, 3=sport, 4=ludicrous
+  bool dualNozzle;            // H2D/H2C dual extruder detected
+  uint8_t activeNozzle;       // 0=left, 1=right (only when dualNozzle)
   unsigned long lastUpdate;   // millis() of last MQTT message
 };
 

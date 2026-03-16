@@ -86,6 +86,14 @@ ScreenState getScreenState() {
 }
 
 // ---------------------------------------------------------------------------
+//  Nozzle label helper (dual nozzle H2D/H2C)
+// ---------------------------------------------------------------------------
+static const char* nozzleLabel(const BambuState& s) {
+  if (!s.dualNozzle) return "Nozzle";
+  return s.activeNozzle == 0 ? "Nozzle L" : "Nozzle R";
+}
+
+// ---------------------------------------------------------------------------
 //  Speed level name helper
 // ---------------------------------------------------------------------------
 static const char* speedLevelName(uint8_t level) {
@@ -340,7 +348,7 @@ static void drawIdle() {
   if (tempChanged) {
     drawTempGauge(tft, SCREEN_W / 2 - 55, 140, 30,
                   s.nozzleTemp, s.nozzleTarget, 300.0f,
-                  dispSettings.nozzle.arc, "Nozzle", nullptr, forceRedraw,
+                  dispSettings.nozzle.arc, nozzleLabel(s), nullptr, forceRedraw,
                   &dispSettings.nozzle);
 
     // Bed temp gauge
@@ -445,7 +453,7 @@ static void drawPrinting() {
   if (tempChanged) {
     drawTempGauge(tft, col2, row1Y, gR,
                   s.nozzleTemp, s.nozzleTarget, 300.0f,
-                  dispSettings.nozzle.arc, "Nozzle", nullptr, forceRedraw,
+                  dispSettings.nozzle.arc, nozzleLabel(s), nullptr, forceRedraw,
                   &dispSettings.nozzle);
 
     drawTempGauge(tft, col3, row1Y, gR,
@@ -611,7 +619,7 @@ static void drawFinished() {
   if (tempChanged) {
     drawTempGauge(tft, gaugeLeft, gaugeY, gR,
                   s.nozzleTemp, s.nozzleTarget, 300.0f,
-                  dispSettings.nozzle.arc, "Nozzle", nullptr, forceRedraw,
+                  dispSettings.nozzle.arc, nozzleLabel(s), nullptr, forceRedraw,
                   &dispSettings.nozzle);
 
     drawTempGauge(tft, gaugeRight, gaugeY, gR,
