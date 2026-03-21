@@ -8,6 +8,7 @@
 #include "config.h"
 #include "button.h"
 #include "buzzer.h"
+#include "timezones.h"
 #include <WebServer.h>
 #include <ArduinoJson.h>
 
@@ -43,6 +44,7 @@ input:focus{border-color:#58A6FF}
   <input type="text" id="ssid" placeholder="Your WiFi network name">
   <label for="pass">WiFi Password</label>
   <input type="password" id="pass" placeholder="WiFi password">
+  <div style="margin-top:6px"><input type="checkbox" id="showpass" onchange="document.getElementById('pass').type=this.checked?'text':'password'" style="vertical-align:middle"><label for="showpass" style="color:#8B949E;font-size:12px;margin:0 0 0 4px;display:inline">Show password</label></div>
   <button class="btn" onclick="saveWifi()">Save &amp; Connect</button>
   <div id="msg" style="margin-top:10px;font-size:13px;text-align:center"></div>
 </div>
@@ -271,44 +273,10 @@ static const char PAGE_HTML[] PROGMEM = R"rawliteral(
 
       <div style="margin-top:16px;padding-top:12px;border-top:1px solid #30363D">
         <h3 style="color:#58A6FF;font-size:14px;margin-bottom:10px">Clock Settings</h3>
-        <label for="tz">Timezone</label>
+        <label for="tz">Timezone (DST switches automatically)</label>
         <select id="tz">
-          <option value="-720" %TZ_N720%>UTC-12:00</option>
-          <option value="-660" %TZ_N660%>UTC-11:00</option>
-          <option value="-600" %TZ_N600%>UTC-10:00 (Hawaii)</option>
-          <option value="-540" %TZ_N540%>UTC-9:00 (Alaska)</option>
-          <option value="-480" %TZ_N480%>UTC-8:00 (Pacific)</option>
-          <option value="-420" %TZ_N420%>UTC-7:00 (Mountain)</option>
-          <option value="-360" %TZ_N360%>UTC-6:00 (Central)</option>
-          <option value="-300" %TZ_N300%>UTC-5:00 (Eastern)</option>
-          <option value="-240" %TZ_N240%>UTC-4:00 (Atlantic)</option>
-          <option value="-210" %TZ_N210%>UTC-3:30 (Newfoundland)</option>
-          <option value="-180" %TZ_N180%>UTC-3:00 (Brazil)</option>
-          <option value="-120" %TZ_N120%>UTC-2:00</option>
-          <option value="-60" %TZ_N60%>UTC-1:00 (Azores)</option>
-          <option value="0" %TZ_0%>UTC+0:00 (London)</option>
-          <option value="60" %TZ_60%>UTC+1:00 (Berlin/Paris)</option>
-          <option value="120" %TZ_120%>UTC+2:00 (Helsinki/Cairo)</option>
-          <option value="180" %TZ_180%>UTC+3:00 (Moscow)</option>
-          <option value="210" %TZ_210%>UTC+3:30 (Tehran)</option>
-          <option value="240" %TZ_240%>UTC+4:00 (Dubai)</option>
-          <option value="270" %TZ_270%>UTC+4:30 (Kabul)</option>
-          <option value="300" %TZ_300%>UTC+5:00 (Karachi)</option>
-          <option value="330" %TZ_330%>UTC+5:30 (India)</option>
-          <option value="345" %TZ_345%>UTC+5:45 (Nepal)</option>
-          <option value="360" %TZ_360%>UTC+6:00 (Dhaka)</option>
-          <option value="420" %TZ_420%>UTC+7:00 (Bangkok)</option>
-          <option value="480" %TZ_480%>UTC+8:00 (Singapore)</option>
-          <option value="540" %TZ_540%>UTC+9:00 (Tokyo)</option>
-          <option value="570" %TZ_570%>UTC+9:30 (Adelaide)</option>
-          <option value="600" %TZ_600%>UTC+10:00 (Sydney)</option>
-          <option value="660" %TZ_660%>UTC+11:00</option>
-          <option value="720" %TZ_720%>UTC+12:00 (Auckland)</option>
+%TIMEZONE_OPTIONS%
         </select>
-        <div class="check-row">
-          <input type="checkbox" id="dst" value="1" %DST%>
-          <label for="dst">Daylight Saving Time (+1h)</label>
-        </div>
         <div class="check-row">
           <input type="checkbox" id="use24h" value="1" %USE24H%>
           <label for="use24h">24-hour time format</label>
@@ -442,6 +410,7 @@ static const char PAGE_HTML[] PROGMEM = R"rawliteral(
       <input type="text" id="ssid" value="%SSID%" placeholder="Your WiFi name">
       <label for="pass">WiFi Password</label>
       <input type="password" id="pass" value="%PASS%" placeholder="WiFi password">
+      <div class="check-row"><input type="checkbox" id="showpass2" onchange="document.getElementById('pass').type=this.checked?'text':'password'"><label for="showpass2">Show password</label></div>
 
       <label for="netmode" style="margin-top:16px">IP Assignment</label>
       <select id="netmode" onchange="toggleStatic()">
@@ -708,7 +677,6 @@ function applyDisplay(){
   if(document.getElementById('clock').checked) p.append('clock','1');
   if(document.getElementById('abar').checked) p.append('abar','1');
   p.append('tz',document.getElementById('tz').value);
-  if(document.getElementById('dst').checked) p.append('dst','1');
   if(document.getElementById('use24h').checked) p.append('use24h','1');
   p.append('clr_bg',document.getElementById('clr_bg').value);
   p.append('clr_track',document.getElementById('clr_track').value);
@@ -872,21 +840,23 @@ static String processTemplate(const String& html) {
   page.replace("%NET_DNS%", netSettings.dns);
   page.replace("%SHOWIP%", netSettings.showIPAtStartup ? "checked" : "");
 
-  // Timezone dropdown
+  // Timezone dropdown (generated from database)
   {
-    const int16_t tzVals[] = {-720,-660,-600,-540,-480,-420,-360,-300,-240,-210,-180,-120,-60,
-                              0,60,120,180,210,240,270,300,330,345,360,420,480,540,570,600,660,720};
-    for (int i = 0; i < (int)(sizeof(tzVals)/sizeof(tzVals[0])); i++) {
-      char ph[16];
-      if (tzVals[i] < 0)
-        snprintf(ph, sizeof(ph), "%%TZ_N%d%%", -tzVals[i]);
-      else
-        snprintf(ph, sizeof(ph), "%%TZ_%d%%", tzVals[i]);
-      page.replace(ph, netSettings.gmtOffsetMin == tzVals[i] ? "selected" : "");
+    size_t tzCount;
+    const TimezoneRegion* regions = getSupportedTimezones(&tzCount);
+    String tzOpts;
+    for (size_t i = 0; i < tzCount; i++) {
+      tzOpts += "          <option value=\"";
+      tzOpts += String((int)i);
+      tzOpts += "\"";
+      if (i == netSettings.timezoneIndex) tzOpts += " selected";
+      tzOpts += ">";
+      tzOpts += regions[i].name;
+      tzOpts += "</option>\n";
     }
+    page.replace("%TIMEZONE_OPTIONS%", tzOpts);
   }
 
-  page.replace("%DST%", netSettings.dstEnabled ? "checked" : "");
   page.replace("%USE24H%", netSettings.use24h ? "checked" : "");
 
   // Rotation dropdown
@@ -993,9 +963,16 @@ static void readDisplayFromForm() {
   dpSettings.showClockAfterFinish = server.hasArg("clock");
   dispSettings.animatedBar = server.hasArg("abar");
 
-  // Clock settings (timezone, DST, 24h)
-  if (server.hasArg("tz")) netSettings.gmtOffsetMin = server.arg("tz").toInt();
-  netSettings.dstEnabled = server.hasArg("dst");
+  // Clock settings (timezone, 24h)
+  if (server.hasArg("tz")) {
+    size_t tzCount;
+    const TimezoneRegion* regions = getSupportedTimezones(&tzCount);
+    int idx = server.arg("tz").toInt();
+    if (idx >= 0 && idx < (int)tzCount) {
+      netSettings.timezoneIndex = (uint8_t)idx;
+      strlcpy(netSettings.timezoneStr, regions[idx].posixString, sizeof(netSettings.timezoneStr));
+    }
+  }
   netSettings.use24h = server.hasArg("use24h");
 }
 
@@ -1113,9 +1090,7 @@ static void handleApply() {
   saveSettings();
   applyDisplaySettings();
   // Re-apply NTP if timezone changed
-  long dstOffset = netSettings.dstEnabled ? 3600 : 0;
-  configTime(netSettings.gmtOffsetMin * 60L, dstOffset,
-             "pool.ntp.org", "time.nist.gov");
+  configTzTime(netSettings.timezoneStr, "pool.ntp.org", "time.nist.gov");
   server.send(200, "text/plain", "OK");
 }
 
@@ -1325,8 +1300,8 @@ static void handleSettingsExport() {
   net["gateway"] = netSettings.gateway;
   net["subnet"] = netSettings.subnet;
   net["dns"] = netSettings.dns;
-  net["gmtOffsetMin"] = netSettings.gmtOffsetMin;
-  net["dstEnabled"] = netSettings.dstEnabled;
+  net["timezoneIndex"] = netSettings.timezoneIndex;
+  net["timezoneStr"] = netSettings.timezoneStr;
   net["use24h"] = netSettings.use24h;
 
   // Rotation
@@ -1449,8 +1424,15 @@ static void handleSettingsImportFinish() {
     if (net["gateway"].is<const char*>())     strlcpy(netSettings.gateway, net["gateway"], sizeof(netSettings.gateway));
     if (net["subnet"].is<const char*>())      strlcpy(netSettings.subnet, net["subnet"], sizeof(netSettings.subnet));
     if (net["dns"].is<const char*>())         strlcpy(netSettings.dns, net["dns"], sizeof(netSettings.dns));
-    if (net["gmtOffsetMin"].is<int16_t>())    netSettings.gmtOffsetMin = net["gmtOffsetMin"].as<int16_t>();
-    if (net["dstEnabled"].is<bool>())         netSettings.dstEnabled = net["dstEnabled"].as<bool>();
+    if (net["timezoneStr"].is<const char*>()) {
+      strlcpy(netSettings.timezoneStr, net["timezoneStr"], sizeof(netSettings.timezoneStr));
+      netSettings.timezoneIndex = net["timezoneIndex"] | (uint8_t)3;
+    } else if (net["gmtOffsetMin"].is<int16_t>()) {
+      // Backward compat: import from old format
+      int16_t oldOffset = net["gmtOffsetMin"].as<int16_t>();
+      const char* migrated = getDefaultTimezoneForOffset(oldOffset);
+      if (migrated) strlcpy(netSettings.timezoneStr, migrated, sizeof(netSettings.timezoneStr));
+    }
     if (net["use24h"].is<bool>())             netSettings.use24h = net["use24h"].as<bool>();
   }
 

@@ -33,8 +33,8 @@ struct NetworkSettings {
   char subnet[16];
   char dns[16];
   bool showIPAtStartup;   // show IP screen for 3s after WiFi connects
-  int16_t gmtOffsetMin;   // timezone offset in minutes (e.g. 60 = UTC+1, 330 = UTC+5:30)
-  bool dstEnabled;        // daylight saving time (+1h)
+  uint8_t timezoneIndex;  // index into timezoneDatabase[]
+  char timezoneStr[64];   // POSIX TZ string (e.g. "CET-1CEST,M3.5.0/02:00,M10.5.0/03:00")
   bool use24h;            // true = 24h format (default), false = 12h AM/PM
 };
 

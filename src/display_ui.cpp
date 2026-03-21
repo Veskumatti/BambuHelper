@@ -217,10 +217,12 @@ static void drawConnectingMQTT() {
   int16_t tw = tft.textWidth("Connecting to Printer");
   drawAnimDots(tft, SCREEN_W / 2 + tw / 2, SCREEN_H / 2 - 6, CLR_TEXT);
 
+  tft.setTextDatum(MC_DATUM);  // restore after drawAnimDots
+
   // Show connection mode + printer info
   PrinterSlot& p = displayedPrinter();
   tft.setTextColor(CLR_TEXT_DIM, CLR_BG);
-  tft.setTextFont(1);
+  tft.setTextFont(2);
 
   const char* modeStr = isCloudMode(p.config.mode) ? "Cloud" : "LAN";
   char infoBuf[40];
@@ -238,8 +240,8 @@ static void drawConnectingMQTT() {
     unsigned long elapsed = (millis() - connectScreenStart) / 1000;
     char elBuf[16];
     snprintf(elBuf, sizeof(elBuf), "%lus", elapsed);
-    tft.fillRect(SCREEN_W / 2 - 20, SCREEN_H / 2 + 28, 40, 12, CLR_BG);
-    tft.drawString(elBuf, SCREEN_W / 2, SCREEN_H / 2 + 34);
+    tft.fillRect(SCREEN_W / 2 - 30, SCREEN_H / 2 + 32, 60, 16, CLR_BG);
+    tft.drawString(elBuf, SCREEN_W / 2, SCREEN_H / 2 + 40);
   }
 
   // Diagnostics info
